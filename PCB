@@ -1,0 +1,49 @@
+package os;
+
+public class PCB {
+private int ProcessID;
+
+
+private int burstTime;
+private int remainingBurst;
+
+private int priority;
+private int originalPriority;
+
+private int memoryRequired ;
+private int arrivalOrder;
+
+private int startTime =0 ;// if not started yet ( -1)
+private int waitingTime=0 ;
+private int terminationTime=0;
+
+
+private int turnAroundTime = 0;
+private boolean starvation      = false;
+
+private String state ;   // "new" | "ready" | "running" | "terminated"
+
+public PCB(int processID, int burstTime, int priority, int memoryRequired,int arrivalOrder) {
+	
+	ProcessID = processID;
+	
+	this.burstTime = burstTime;
+	this.remainingBurst = burstTime;
+	
+	this.priority = priority;
+	this.originalPriority = priority;
+	
+	this.memoryRequired = memoryRequired;
+	this.arrivalOrder=arrivalOrder;
+	
+	this.state = "new" ;
+	
+}
+public String toString() {
+    return "P" + ProcessID + "(burst=" + burstTime
+         + ", priority=" + priority + ", memery required =" + memoryRequired + "MB)";
+}
+
+
+
+}
