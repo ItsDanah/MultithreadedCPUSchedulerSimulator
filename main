@@ -6,11 +6,17 @@ public class main {
     public static void main(String[] args) {
 
         Queue<PCB> jobQueue = new LinkedList<>();
+	        Queue<PCB> readyQueue = new LinkedList<>();
+	        Memory memory = new Memory();
+	        SystemCall systemCalls = new SystemCall(memory);
 
-        JobReaderThread reader =
-                new JobReaderThread(jobQueue, "job.txt");
+	        JobReaderThread reader =
+	                new JobReaderThread(jobQueue, "job.txt");
+	        JobLoaderThread loader =
+	                new JobLoaderThread(jobQueue, readyQueue,systemCalls,reader);
 
-        reader.start();
+	        reader.start();
+	        loader.start();
         
     }
 }
