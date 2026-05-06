@@ -1,0 +1,80 @@
+package os;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.util.Queue;
+
+public class JobReaderThread extends Thread {
+
+    private Queue<PCB> jobQueue;
+    private String filename;
+
+    public JobReaderThread(Queue<PCB> jobQueue, String filename) {
+        this.jobQueue = jobQueue;
+        this.filename = filename;
+    }
+
+    public void run() {
+
+        try (
+            BufferedReader br = new BufferedReader(new FileReader(filename))) {
+
+            String line;
+            int arrivalOrder = 0;
+
+            while ((line = br.readLine()) != null) {
+
+                line = line.trim();
+
+                if (line.isEmpty()) {
+                    continue;
+                }
+
+                // Split memory section
+                String[] split1 = line.split(";");
+
+                int memoryRequired =
+                        Integer.parseInt(split1[1]);
+
+                // Split PID, burst, priority
+                String[] split2 = split1[0].split(":");
+
+                int processID =
+                        Integer.parseInt(split2[0]);
+
+                int burstTime =
+                        Integer.parseInt(split2[1]);
+
+                int priority =
+                        Integer.parseInt(split2[2]);
+
+                // Create PCB
+                PCB process = new PCB(
+                        processID,
+                        burstTime,
+                        priority,
+                        memoryRequired,
+                        arrivalOrder
+                );
+
+                // Add to Job Queue
+                synchronized (jobQueue) {
+
+                    jobQueue.add(process);
+
+                    System.out.println(
+                            "Added to Job Queue: " + process
+                    );
+                }
+
+                arrivalOrder++;
+            }
+
+        } catch (Exception e) {
+
+            System.out.println("Error reading file.");
+            e.printStackTrace();
+        }
+
+        System.out.println("Job Reader Thread Finished.");
+    }
+}
