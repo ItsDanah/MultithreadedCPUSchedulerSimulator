@@ -1,0 +1,16 @@
+import java.util.LinkedList;
+import java.util.Queue;
+
+public class main {
+
+    public static void main(String[] args) {
+
+        Queue<PCB> jobQueue = new LinkedList<>();
+
+        JobReaderThread reader =
+                new JobReaderThread(jobQueue, "job.txt");
+
+        reader.start();
+        
+    }
+}
