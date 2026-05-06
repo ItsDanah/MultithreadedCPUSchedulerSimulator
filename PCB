@@ -1,34 +1,45 @@
-package os;
+
 public class PCB {
     public enum State {
         NEW, READY, RUNNING, TERMINATED
     }
     private int processID;
+    private State state;
     private int burstTime;
     private int remainingBurst;
     private int priority;
     private int originalPriority;
     private int memoryRequired;
-    private int arrivalOrder;
-    private int arrivalTime = 0;
-    private int startTime = -1;
-    private int waitingTime = 0;
-    private int terminationTime = 0;
-    private int turnAroundTime = 0;
-    private boolean starvation = false;
-    private State state;
-    public PCB(int processID, int burstTime, int priority,
-               int memoryRequired, int arrivalOrder) {
+    private int arrivalOrder; // مو موجود هذا عند ابو سارة
+    private int arrivalTime;
+    private int startTime;
+    private int waitingTime;
+    private int terminationTime; 
+    private int turnAroundTime;
+    private boolean starvation;
+    
+    public PCB(int processID, int burstTime, int priority, int memoryRequired, int arrivalOrder) {
         this.processID = processID;
+        this.state = State.NEW;
         this.burstTime = burstTime;
         this.remainingBurst = burstTime;
         this.priority = priority;
         this.originalPriority = priority;
         this.memoryRequired = memoryRequired;
         this.arrivalOrder = arrivalOrder;
-        this.state = State.NEW;
+        this.arrivalTime = 0;
+        this.startTime = -1;
+        this.waitingTime = 0;
+        this.terminationTime = 0;
+        this.turnAroundTime = 0;
+        this.starvation = false;
+
     }
+
+    // اللي تحت  هذا الكلام مو عند ابو سارة
+
     public int getProcessID() { return processID; }
+    public State getState() { return state; }
     public int getBurstTime() { return burstTime; }
     public int getRemainingBurst() { return remainingBurst; }
     public int getPriority() { return priority; }
@@ -40,56 +51,33 @@ public class PCB {
     public int getWaitingTime() { return waitingTime; }
     public int getTerminationTime() { return terminationTime; }
     public int getTurnAroundTime() { return turnAroundTime; }
-    public boolean isStarved() { return starvation; }
-    public State getState() { return state; }
-    public void setRemainingBurst(int remainingBurst) {
-        this.remainingBurst = remainingBurst;
-    }
-    public void setPriority(int priority) {
-        this.priority = priority;
-    }
-    public void setStartTime(int startTime) {
-        this.startTime = startTime;
-    }
-    public void setWaitingTime(int waitingTime) {
-        this.waitingTime = waitingTime;
-    }
-    public void setTerminationTime(int terminationTime) {
-        this.terminationTime = terminationTime;
-    }
-    public void setTurnAroundTime(int turnAroundTime) {
-        this.turnAroundTime = turnAroundTime;
-    }
-    public void setState(State state) {
-        this.state = state;
-    }
-    public void markStarved() {
-        this.starvation = true;
-    }
+    public boolean getStarvation() { return starvation; }
+    
+    public void setRemainingBurst(int remainingBurst) {this.remainingBurst = remainingBurst;}
+    public void setPriority(int priority) {this.priority = priority;}
+    public void setStartTime(int startTime) {this.startTime = startTime;}
+    public void setWaitingTime(int waitingTime) {this.waitingTime = waitingTime;}
+    public void setTerminationTime(int terminationTime) {this.terminationTime = terminationTime;}
+    public void setTurnAroundTime(int turnAroundTime) {this.turnAroundTime = turnAroundTime;}
+    public void setState(State state) {this.state = state;}
+    public void markStarved() {this.starvation = true;}
+
     public void executeOneUnit() {
-        if (remainingBurst > 0) {
+        if (remainingBurst > 0)
             remainingBurst--;
-        }
     }
     public boolean isFinished() {
         return remainingBurst == 0;
     }
     public void applyAging() {
-        if (priority > 1) {
+        if (priority > 1)
             priority--;
-        }
     }
     public void calculateTimes() {
         this.turnAroundTime = terminationTime - arrivalTime;
         this.waitingTime = turnAroundTime - burstTime;
     }
-    @Override
     public String toString() {
-        return "P" + processID +
-                " [burst=" + burstTime +
-                ", remaining=" + remainingBurst +
-                ", priority=" + priority +
-                ", state=" + state +
-                ", memory=" + memoryRequired + "MB]";
+        return "P" + processID +" [burst=" + burstTime +", remaining=" + remainingBurst +", priority=" + priority +", state=" + state +", memory=" + memoryRequired + "MB]";
     }
 }
