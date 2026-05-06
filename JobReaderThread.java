@@ -61,6 +61,8 @@ public class JobReaderThread extends Thread {
 
                     jobQueue.add(process);
 
+                       jobQueue.notifyAll();
+                    
                     System.out.println(
                             "Added to Job Queue: " + process
                     );
