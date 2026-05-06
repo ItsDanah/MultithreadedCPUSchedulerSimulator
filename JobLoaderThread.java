@@ -53,7 +53,7 @@ this.readerThread = readerThread;
  private void moveToReadyQueue(PCB job) {
 	    jobQueue.poll();
 	    job.setState(PCB.State.READY);
-	    systemCalls.createProcess(job.getProcessID());
+	   
 	    synchronized (readyQueue) {
 	        readyQueue.add(job);
 	    }
