@@ -249,7 +249,7 @@ public class Scheduler {
     }
 
     // Increase Waiting Time
-=    private void applyWaitingTime(
+private void applyWaitingTime(
             Queue<PCB> queue) {
 
         for (PCB process : queue) {
@@ -260,7 +260,7 @@ public class Scheduler {
     }
 
     // Sleep
-=    private void sleepALittle() {
+ private void sleepALittle() {
 
         try {
 
