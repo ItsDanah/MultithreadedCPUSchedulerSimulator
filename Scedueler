@@ -1,0 +1,175 @@
+package os;
+import java.util.*;
+public class SchedulingAlgorithms {
+private Queue<PCB> readyQueue;
+private SystemCall SystemCall;
+private LinkedList<PCB> terminatedProccesses;
+private int totalProccesses;
+private int currentTime=0;
+
+
+
+
+public SchedulingAlgorithms(Queue<PCB> readyQueue, SystemCall systemCalls, LinkedList<PCB> terminatedProccesses,
+	int totalProccesses, int currentTime) {
+	this.readyQueue = readyQueue;
+	this.SystemCall = systemCalls;
+	this.terminatedProccesses = terminatedProccesses;
+	this.totalProccesses = totalProccesses;
+	this.currentTime = currentTime;
+}
+	
+	
+	
+public void SJF() {
+	currentTime=0;
+	ArrayList<PCB> workingQueue = new ArrayList<>();
+	System.out.println("========================================================");
+	System.out.println("Shortest Job First Executing "+"[Time: "+currentTime+"ms ]");
+	System.out.println("========================================================");
+	
+	while(terminatedProccesses.size() < totalProccesses) {
+		transferProccesses(workingQueue); //helper
+		if(workingQueue.isEmpty()) { waits(); continue; }
+		
+		workingQueue.sort((a,b) -> a.getBurstTime() - b.getBurstTime() );    //sort by shortest burst time
+		PCB proccess = workingQueue.remove(0);
+		execute(proccess);
+		
+		
+	}
+}
+	
+	
+public void RR()	{
+	currentTime=0;
+	int quantum = 5;
+	System.out.println("========================================================");
+	System.out.println("Round Robin Executing "+"[Time: "+currentTime+" ms & Quantum: 5ms]");
+	System.out.println("========================================================");
+	while(terminatedProccesses.size() < totalProccesses) {
+		PCB currentP;
+		
+		synchronized (readyQueue) {
+			if(readyQueue.isEmpty()) {waits();continue;}
+			currentP = readyQueue.remove();
+		
+		}	
+		if(currentP.getStartTime() == -1) {
+			currentP.setStartTime(currentTime);
+		}
+		
+		
+		currentP.setState(PCB.State.RUNNING);
+		
+		int execTime = Math.min(quantum, currentP.getRemainingBurst());
+		System.out.println("Time: "+currentTime+ " [ Proccess: " +currentP.getProcessID() +" Executes for: "+ execTime +"ms ]");
+		currentTime += execTime;
+		
+		currentP.setRemainingBurst(currentP.getRemainingBurst()- execTime);
+		
+		
+		
+		
+		if(currentP.getRemainingBurst() == 0) {
+			
+			currentP.setTerminationTime(currentTime);
+			currentP.setTurnAroundTime(currentP.getTerminationTime());
+			currentP.setWaitingTime(currentP.getTerminationTime()-currentP.getBurstTime());
+			currentP.setState(PCB.State.TERMINATED);
+			
+			
+			SystemCall.setTime(currentTime);
+			SystemCall.createProcess(currentP.getProcessID());
+			SystemCall.terminateProcess(currentP.getProcessID());
+			
+
+			terminatedProccesses.add(currentP);
+			SystemCall.deallocateMemory(currentP.getProcessID(), currentP.getMemoryRequired());	
+		}
+		else{
+			currentP.setState(PCB.State.READY);
+			synchronized(readyQueue) {
+				readyQueue.add(currentP);
+			}
+		}
+		
+		
+		
+		
+		
+		
+		
+		
+	}
+
+	}
+		
+
+
+
+
+
+
+
+
+
+	
+	
+	/*////////////////////////////////////////////////////////////
+	                         Helper Methods
+	*/////////////////////////////////////////////////////////////
+
+public void transferProccesses(ArrayList<PCB> workingQueue) {
+	synchronized(readyQueue){
+		while(!readyQueue.isEmpty()) {
+			PCB proccess = readyQueue.remove();
+			workingQueue.add(proccess);
+		}
+	}
+}
+    
+
+public void waits() {
+	try {
+		Thread.sleep(30);
+	}catch(InterruptedException e) {e.printStackTrace();}
+}
+	
+	
+	
+	
+public void execute(PCB p) {
+	p.setStartTime(currentTime);   //proccess starts
+	p.setState(PCB.State.RUNNING);
+	currentTime += p.getBurstTime();
+	
+	SystemCall.setTime(currentTime);
+	SystemCall.createProcess(p.getProcessID());
+	
+	
+	
+	
+	finishExecution(p);
+}
+	
+	public void finishExecution(PCB p) {
+		p.setTerminationTime(currentTime);
+		p.setTurnAroundTime(p.getTerminationTime()-p.getArrivalTime());
+		p.setWaitingTime(p.getTurnAroundTime()-p.getBurstTime());
+		p.setState(PCB.State.TERMINATED);
+		
+		SystemCall.setTime(currentTime);
+		
+		
+		SystemCall.terminateProcess(p.getProcessID());
+		SystemCall.deallocateMemory(p.getProcessID(), p.getMemoryRequired());
+		
+		System.out.println("At Time:"+currentTime+ "[ Proccess P: " +p.getProcessID() +" Executed from : "+ p.getStartTime() +" to "+p.getTerminationTime() +" Total Burst Time: "+p.getBurstTime()+" ]");
+	}
+	
+	
+	
+	
+	
+}
