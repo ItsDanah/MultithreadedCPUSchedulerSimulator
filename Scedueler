@@ -44,9 +44,8 @@ public void SJF() {
 public void RR()	{
 	currentTime=0;
 	int quantum = 5;
-	System.out.println("========================================================");
-	System.out.println("Round Robin Executing "+"[Time: "+currentTime+" ms & Quantum: 5ms]");
-	System.out.println("========================================================");
+	System.out.println("===========================Round Robin Executing [Time: " +currentTime+ "ms & Quantum: 5ms]=============================");
+
 	while(terminatedProccesses.size() < totalProccesses) {
 		PCB currentP;
 		
@@ -93,21 +92,68 @@ public void RR()	{
 				readyQueue.add(currentP);
 			}
 		}
-		
-		
-		
-		
-		
-		
-		
-		
+
 	}
 
 	}
 		
 
+public void Priority() {
+	currentTime=0;
+	ArrayList<PCB> workingQueue = new ArrayList<PCB>();
+	System.out.println("========================================================");
+	System.out.println("Priority Executing "+"[Time: "+currentTime+" ms]");
+	System.out.println("========================================================");
+	while(terminatedProccesses.size() < totalProccesses) {
+	
+		synchronized(readyQueue){
+			while(!readyQueue.isEmpty()) {
+				workingQueue.add(readyQueue.remove());
+			}
+		}
+		
 
+		if(workingQueue.isEmpty()) {waits(); continue;}
+		for(PCB proccess : workingQueue) {
+			proccess.setWaitingTime(currentTime-proccess.getArrivalTime());
+		}
+		
+		Aging(workingQueue);
+		
+		workingQueue.sort((a,b) -> {if(a.getPriority()!=b.getPriority()) {return a.getPriority() -b.getPriority();} return a.getArrivalOrder() - b.getArrivalOrder(); } );
+		int starvationlimit = workingQueue.size() *5;
+		PCB current = workingQueue.remove(0);
+		
+		current.setState(PCB.State.RUNNING);
+		SystemCall.setTime(currentTime);
+		SystemCall.createProcess(current.getProcessID());
+		System.out.println("Time:"+currentTime+ "[ Proccess P: " +current.getProcessID() +" | Priority: "+current.getPriority()+" ]");
+		current.setStartTime(currentTime);
+		currentTime+= current.getBurstTime();
+		
+		
+		current.setTerminationTime(currentTime);
+		current.setTurnAroundTime(current.getTerminationTime()-current.getArrivalTime());
+		current.setWaitingTime(current.getTurnAroundTime()-current.getBurstTime());
+		
+	
+		
+		
+		if(current.getWaitingTime()>starvationlimit) {
+			current.markStarved();
+			System.out.println("Proccess"+current.getProcessID() +" IS STARVING");}
+		
+		
+			current.setState(PCB.State.TERMINATED);
+			SystemCall.setTime(currentTime);
 
+			SystemCall.terminateProcess(current.getProcessID());
+			SystemCall.deallocateMemory(current.getProcessID(), current.getMemoryRequired());
+			terminatedProccesses.add(current);
+			System.out.println("[ Proccess P: " +current.getProcessID() +" has finished execution ]");
+
+		}
+	}
 
 
 
@@ -169,7 +215,13 @@ public void execute(PCB p) {
 	}
 	
 	
-	
+	public void Aging(ArrayList<PCB> workingQueue) {
+		for(PCB proccess : workingQueue) {
+			if(proccess.getWaitingTime()>= 4 && proccess.getPriority() > 1) {
+				proccess.setPriority(proccess.getPriority() -1);
+			}
+		}
+	}
 	
 	
 }
