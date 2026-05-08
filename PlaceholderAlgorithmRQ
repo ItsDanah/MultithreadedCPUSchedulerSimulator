@@ -216,7 +216,7 @@ public void execute(PCB p) {
 
     	for(PCB proccess : workingQueue) {
 			proccess.setWaitingTime(currentTime - proccess.getArrivalTime());
-			if(proccess.getWaitingTime() > proccess.numberOfProcessInRQ * 5 && !proccess.getStarvation()) {
+			if(proccess.getWaitingTime() > proccess.getNumberOfProcessInRQ() * 5 && !proccess.getStarvation()) {
 				proccess.markStarved();
 				System.out.println("[STARVATION] P:"+proccess.getProcessID() + " starving");
 			}
