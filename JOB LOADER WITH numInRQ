@@ -1,0 +1,93 @@
+package os;
+import java.util.Queue;
+
+public class JobLoaderThread extends Thread{
+	
+	private Queue<PCB> jobQueue;
+	private Queue<PCB> readyQueue;
+	private SystemCall systemCalls;
+	 private JobReaderThread readerThread;
+	private volatile boolean running = true;
+	
+	  public JobLoaderThread(Queue<PCB> jobQueue, Queue<PCB> readyQueue,SystemCall systemCall, JobReaderThread readerThread) {
+this.jobQueue = jobQueue;
+this.readyQueue = readyQueue;
+this.systemCalls = systemCall;
+this.readerThread = readerThread;
+}
+ public  void run() {
+ 
+	 System.out.println("Job Loader Thread Started At Time 0 ms");
+	 
+	 while (running && (readerThread.isAlive() || !jobQueue.isEmpty())) {
+         synchronized (jobQueue) {
+             if (jobQueue.isEmpty()) {
+               waitUntilJobsArrive();
+             } else {
+                 LoadJob();
+             }
+         }
+     }
+     System.out.println("Job Loader Thread Finished at " + systemCalls.getRealTime());
+     
+ }
+ private void waitUntilJobsArrive() {
+	 try {
+         jobQueue.wait(100);
+     } catch (InterruptedException e) {
+         running = false;
+     }
+ }
+ private void LoadJob() {
+     PCB nextJob = jobQueue.peek();
+     if (memoryIsAvailable(nextJob)) {
+    	 moveToReadyQueue(nextJob); 
+     } else {
+         waitUntilMemoryFrees();
+     }
+ }
+ 
+ private boolean memoryIsAvailable(PCB job) {
+     return systemCalls.allocateMemory( job.getProcessID(),job.getMemoryRequired() );
+ }
+ 
+ 
+ 
+ private void moveToReadyQueue(PCB job) {
+	    jobQueue.poll();
+	    job.setState(PCB.State.READY);
+	    
+	    synchronized (readyQueue) {
+job.setNumberOfProcessInRQ(readyQueue.size());
+	        readyQueue.add(job);
+	        readyQueue.notifyAll();
+	    }
+	    System.out.println("LOADER THREAD " + systemCalls.getRealTime()
+	            + "\n | P" + job.getProcessID()
+	            + " Loaded to Ready Queue | Memory remaining: "
+	            + systemCalls.getAvailableMemory() + " MB");
+	}
+ 
+ 
+ private void waitUntilMemoryFrees() {
+     System.out.println("[LOADER]  No enough memory for P"
+             + jobQueue.peek().getProcessID()
+             + " | Waiting... ("
+             + systemCalls.getAvailableMemory() + " MB available)");
+     try {
+         jobQueue.wait(100);
+     } catch (InterruptedException e) {
+         running = false;
+     }
+ }
+ 
+
+ public void stopLoading() {
+     running = false;
+ }
+	 
+ }
+	
+    
+
+
