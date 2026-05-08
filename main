@@ -1,22 +1,20 @@
 import java.util.LinkedList;
-import java.util.Queue;
+import java.util.Queue; // interface representing FIFO structure
 
-public class main {
+public class Main {
 
     public static void main(String[] args) {
 
-        Queue<PCB> jobQueue = new LinkedList<>();
-	        Queue<PCB> readyQueue = new LinkedList<>();
-	        Memory memory = new Memory();
-	        SystemCall systemCalls = new SystemCall(memory);
+        	Queue<PCB> jobQueue = new LinkedList<>(); // contains processes waiting to enter memory.
+	        Queue<PCB> readyQueue = new LinkedList<>(); // contains processes ready for CPU execution.
+	        Memory memory = new Memory(); // ram
+	        SystemCall systemCalls = new SystemCall(memory); // provides operating system services, recieves memory object to allocate/deallocate memory.
 
-	        JobReaderThread reader =
-	                new JobReaderThread(jobQueue, "job.txt");
-	        JobLoaderThread loader =
-	                new JobLoaderThread(jobQueue, readyQueue,systemCalls,reader);
+	        JobReaderThread reader = new JobReaderThread(jobQueue, "job.txt"); // thread responsible for reading processes from the text file.
+	        JobLoaderThread loader =new JobLoaderThread(jobQueue, readyQueue,systemCalls,reader); // Take jobs from jobQueue, Check memory availability, Move to readyQueue.
 
-	        reader.start();
-	        loader.start();
+	        reader.start(); // start the thread in JobReaderThread class.
+	        loader.start(); // start the thread in JobLoaderThread class.
         
     }
 }
