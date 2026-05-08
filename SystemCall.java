@@ -1,28 +1,29 @@
-package os;
+// ─────────────── This class simulates operating system services ─────────────────────
+
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 
 public class SystemCall {
-    private Memory MainMemory;
-    private int systemTime; 
+    private Memory MainMemory; // for memory management
+    private int systemTime; // simulated system time
 
     public SystemCall(Memory memory) {
-        this.MainMemory = memory;
-        this.systemTime = 0;
+        this.MainMemory = memory; // for memory management
+        this.systemTime = 0; // simulated system time
     }
 
     // ── Process Control ──────────────────────────────
-    public void createProcess(int processId) {
+    public void createProcess(int processId) { // prints process creation message
         System.out.println("[SYSTEM CALL] Process " + processId + " created at " + getSystemTime() );
     }
 
-    public void terminateProcess(int processId) {
+    public void terminateProcess(int processId) { // prints termination message
         System.out.println("[SYSTEM CALL] Process " + processId + " terminated at " + getSystemTime());
     }
 
     // ── Memory Management ────────────────────────────
-    public boolean allocateMemory(int processId, int size) {
-        boolean success = MainMemory.allocateMemory(size);
+    public boolean allocateMemory(int processId, int size) { 
+        boolean success = MainMemory.allocateMemory(size); // allocates memory through the Memory class
         if (success)
             System.out.println("Memory allocated for P" + processId + " (" + size + " MB)");
         else
@@ -31,11 +32,11 @@ public class SystemCall {
     }
 
     public void deallocateMemory(int processId, int size) {
-        MainMemory.deallocateMemory(size);
+        MainMemory.deallocateMemory(size); // deallocates memory through the Memory class
         System.out.println(" Memory freed for P" + processId + " (" + size + " MB)");
     }
 
-    // ── Information ──────────────────────────────────
+    // ── setters and getters ──────────────────────────────────
     public void setTime(int time) {
         this.systemTime = time;
     }
