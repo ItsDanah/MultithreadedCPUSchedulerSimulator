@@ -1,5 +1,6 @@
 package os;
 
+
 public class PCB {
     public enum State {
         NEW, READY, RUNNING, TERMINATED
@@ -18,7 +19,7 @@ public class PCB {
     private int terminationTime; 
     private int turnAroundTime;
     private boolean starvation;
-    private int starvationThreashold;
+    private int NumberOfProcessInRQ;
    private int lastAgingLevel = 0;
     
     public PCB(int processID, int burstTime, int priority, int memoryRequired, int arrivalOrder) {
@@ -55,7 +56,7 @@ public class PCB {
     public int getTerminationTime() { return terminationTime; }
     public int getTurnAroundTime() { return turnAroundTime; }
     public boolean getStarvation() { return starvation; }
-    public int getStarvationThreashold() {return starvationThreashold;}
+    public int getNumberOfProcessInRQ() {return NumberOfProcessInRQ;}
     
     public void setRemainingBurst(int remainingBurst) {this.remainingBurst = remainingBurst;}
     public void setPriority(int priority) {this.priority = priority;}
@@ -65,6 +66,7 @@ public class PCB {
     public void setTurnAroundTime(int turnAroundTime) {this.turnAroundTime = turnAroundTime;}
     public void setState(State state) {this.state = state;}
     public void markStarved() {this.starvation = true;}
+    public void setNumberOfProcessInRQ(int numInRQ) { NumberOfProcessInRQ=numInRQ;}
 
     
     
@@ -82,9 +84,7 @@ public class PCB {
 		this.lastAgingLevel = lastAgingLevel;
 	}
 	
-	public void setStarvationThreashold(int starvationThreashold) {
-		this.starvationThreashold = starvationThreashold;
-	}
+	
 
 	public void executeOneUnit() {
         if (remainingBurst > 0)
