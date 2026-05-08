@@ -1,0 +1,246 @@
+
+import java.util.*;
+
+import java.util.*;
+public class SchedulingAlgorithms {
+private Queue<PCB> readyQueue;
+private SystemCall SystemCall;
+private LinkedList<PCB> terminatedProccesses;
+private int totalProccesses;
+private int currentTime=0;
+private String ganttChart = "";
+private String ganttTimes = String.format("%-7d", 0);;
+
+
+
+
+public SchedulingAlgorithms(Queue<PCB> readyQueue, SystemCall systemCalls, LinkedList<PCB> terminatedProccesses,
+	int totalProccesses, int currentTime) {
+	this.readyQueue = readyQueue;
+	this.SystemCall = systemCalls;
+	this.terminatedProccesses = terminatedProccesses;
+	this.totalProccesses = totalProccesses;
+	this.currentTime = currentTime;
+}
+	
+	
+	
+public void SJF() {
+	currentTime=0;
+	ArrayList<PCB> workingQueue = new ArrayList<>();
+	System.out.println("========================Shortest Job First Executing "+"[Time: "+currentTime+"ms ]===========================");
+
+	
+	while(terminatedProccesses.size() < totalProccesses) {
+		transferProccesses(workingQueue); //helper
+		if(workingQueue.isEmpty()) { waits(); continue; }
+		
+		workingQueue.sort((a,b) -> a.getBurstTime() - b.getBurstTime() );    //sort by shortest burst time
+		PCB proccess = workingQueue.remove(0);
+		execute(proccess);
+		
+		
+	}
+}
+	
+	
+public void RR()	{
+	currentTime=0;
+	int quantum = 5;
+	System.out.println("===========================Round Robin Executing [Time: " +currentTime+ "ms & Quantum: 5ms]=============================");
+
+	while(terminatedProccesses.size() < totalProccesses) {
+		PCB currentP;
+		
+		synchronized (readyQueue) {
+			if(readyQueue.isEmpty()) {waits();continue;}
+			currentP = readyQueue.remove();
+		
+		}	
+		if(currentP.getStartTime() == -1) {
+			currentP.setStartTime(currentTime);
+			SystemCall.setTime(currentTime);
+			SystemCall.createProcess(currentP.getProcessID());
+		}
+		
+		currentP.setState(PCB.State.RUNNING);
+		
+		int execTime = Math.min(quantum, currentP.getRemainingBurst());
+		ganttChart += String.format("| %-4s ", "P" + currentP.getProcessID());	
+		currentTime += execTime;	
+		ganttTimes += String.format("%-7d", currentTime);		
+		currentP.setRemainingBurst(currentP.getRemainingBurst()- execTime);
+		
+		
+		
+		
+		if(currentP.getRemainingBurst() == 0) {
+			
+			currentP.setTerminationTime(currentTime);
+			currentP.setTurnAroundTime(currentP.getTerminationTime()-currentP.getArrivalTime());
+			currentP.setWaitingTime(currentP.getTerminationTime()-currentP.getBurstTime());
+			currentP.setState(PCB.State.TERMINATED);
+			
+			
+			SystemCall.setTime(currentTime);
+			SystemCall.terminateProcess(currentP.getProcessID());
+
+			terminatedProccesses.add(currentP);
+			SystemCall.deallocateMemory(currentP.getProcessID(), currentP.getMemoryRequired());	
+			System.out.printf("[FINISHED] P%-2d | Start: %-3d | End: %-3d | Burst: %-3d%n"
+			        ,currentP.getProcessID(),currentP.getStartTime(),currentP.getTerminationTime(),currentP.getBurstTime());
+		}
+		else{
+			currentP.setState(PCB.State.READY);
+			synchronized(readyQueue) {
+				readyQueue.add(currentP);
+			}
+		}
+
+	}
+}
+		
+
+public void Priority() {
+	currentTime=0;
+	ArrayList<PCB> workingArray = new ArrayList<PCB>();
+
+	System.out.println("==================== Priority Executing "+"[Time: "+currentTime+" ms] =======================");
+	
+	while(terminatedProccesses.size() < totalProccesses) {
+		
+		transferProccesses(workingArray);
+
+		if(workingArray.isEmpty()) {waits(); continue;}
+		
+		
+		detectStarvation(workingArray);
+		Aging(workingArray);
+		
+		workingArray.sort((a,b) -> {if(a.getPriority()!=b.getPriority()) {return a.getPriority() -b.getPriority();} return a.getArrivalOrder() - b.getArrivalOrder(); } );
+		
+		PCB current = workingArray.remove(0);
+		
+		execute(current);
+		}
+	}
+
+
+
+
+
+
+
+
+
+	
+	
+	/*////////////////////////////////////////////////////////////
+	                         Helper Methods
+	*/////////////////////////////////////////////////////////////
+
+public void transferProccesses(ArrayList<PCB> workingQueue) {
+	synchronized(readyQueue){
+		while(!readyQueue.isEmpty()) {
+			PCB proccess = readyQueue.remove();
+			workingQueue.add(proccess);
+		}
+	}
+}
+    
+
+public void waits() {
+	try {
+		Thread.sleep(30);
+	}catch(InterruptedException e) {e.printStackTrace();}
+}
+	
+	
+	
+	
+public void execute(PCB p) {
+	if(p.getStartTime() == -1)//proccess first time executing
+	p.setStartTime(currentTime);   //proccess starts
+	p.setState(PCB.State.RUNNING);
+	
+	SystemCall.setTime(currentTime);
+		SystemCall.createProcess(p.getProcessID());
+		ganttChart += String.format("| %-4s ", "P" + p.getProcessID());		
+		currentTime += p.getBurstTime();
+		ganttTimes += String.format("%-7d", currentTime);	
+	
+	
+	finishExecution(p);
+}
+	
+	public void finishExecution(PCB p) {
+		p.setTerminationTime(currentTime);
+		p.setTurnAroundTime(p.getTerminationTime()-p.getArrivalTime());
+		p.setWaitingTime(p.getTurnAroundTime()-p.getBurstTime());
+		p.setState(PCB.State.TERMINATED);
+		
+		SystemCall.setTime(currentTime);
+		
+		
+		SystemCall.terminateProcess(p.getProcessID());
+		SystemCall.deallocateMemory(p.getProcessID(), p.getMemoryRequired());
+		terminatedProccesses.add(p);
+		System.out.printf("[FINISHED] P%-2d | Start: %-3d | End: %-3d | Burst: %-3d%n"
+		        ,p.getProcessID(),p.getStartTime(),p.getTerminationTime(),p.getBurstTime());
+	}
+
+	public void Aging(ArrayList<PCB> workingQueue) {
+	    for(PCB proccess : workingQueue) {
+	        int currentAgingLevel = proccess.getWaitingTime() / 4;
+	        int agingtoApply = currentAgingLevel - proccess.getLastAgingLevel();
+	        int startPriority=proccess.getPriority();
+	       
+	        for(int i = 0; i < agingtoApply; i++) {
+	            if(proccess.getPriority() > 1) {  // Just removed getStarvation()
+	                proccess.setPriority(proccess.getPriority() - 1); 
+	            }
+	        }
+	        if(startPriority != proccess.getPriority()) {
+	        	
+	        	System.out.printf("[AGING] Time: %-3d | "+"P%-2d |"+ "Priority: %-2d -> %-2d%n"
+	        ,currentTime,proccess.getProcessID(),startPriority,proccess.getPriority());
+	        	
+	        }
+	        proccess.setLastAgingLevel(currentAgingLevel);
+	    }
+	}
+	
+    public void detectStarvation(ArrayList<PCB> workingQueue) {
+		
+		// int numberOfProcessInRQ = workingQueue.size(); -------------------------- delete later ---------------------------
+
+    	for(PCB proccess : workingQueue) {
+			proccess.setWaitingTime(currentTime - proccess.getArrivalTime());
+			if(proccess.getWaitingTime() > proccess.numberOfProcessInRQ * 5 && !proccess.getStarvation()) {
+				proccess.markStarved();
+				System.out.println("[STARVATION] P:"+proccess.getProcessID() + " starving");
+			}
+		}
+
+    }
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	public String getGanttChart() {
+	return ganttChart;
+}
+public String getGanttTimes() {
+	return ganttTimes;
+}
+	
+	
+}
