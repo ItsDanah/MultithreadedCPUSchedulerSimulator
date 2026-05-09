@@ -1,0 +1,488 @@
+package os;
+import java.util.*;
+
+public class SchedulingAlgorithms {
+
+    private Queue<PCB> readyQueue;
+
+    private SystemCall SystemCall;
+
+    private LinkedList<PCB> terminatedProccesses;
+
+    private JobReaderThread readerThread;
+
+    private int currentTime = 0;
+
+    private String ganttChart = "";
+
+    private String ganttTimes =
+            String.format("%-7d", 0);
+
+        private JobLoaderThread loaderThread;
+
+    public SchedulingAlgorithms(
+            Queue<PCB> readyQueue,
+            SystemCall systemCalls,
+            LinkedList<PCB> terminatedProccesses,
+            JobReaderThread readerThread,JobLoaderThread loaderThread,
+            int currentTime
+    ) {
+
+        this.readyQueue = readyQueue;
+
+        this.SystemCall = systemCalls;
+
+        this.terminatedProccesses = terminatedProccesses;
+
+        this.readerThread = readerThread;
+
+        this.currentTime = currentTime;
+        this.loaderThread = loaderThread;
+    }
+
+    // =====================================================
+    // SJF
+    // =====================================================
+
+    public void SJF() {
+
+        currentTime = 0;
+
+        ArrayList<PCB> workingQueue = new ArrayList<>(); //Temporary queue used for schedueling decisions
+
+        System.out.println("======================== " + "Shortest Job First Executing "+ "[Time: "+ currentTime+ " ms ] ===========================" );
+
+        //Continue schedueling whil:
+        //1. Loader thread is still loading processes
+        //2. Ready queue still contains processes
+        //3. Working queue still contains processes
+        while (loaderThread.isAlive() || !readyQueue.isEmpty()|| !workingQueue.isEmpty()) {
+
+            transferProcesses(workingQueue);//move newly loaded processes  into working queue
+            
+            //CPU waits when there are no ready processes
+            if (workingQueue.isEmpty()) {
+
+                waits();
+
+                continue;
+            }
+            
+            //Sort processes by shortest burst time
+            workingQueue.sort((a, b) -> a.getBurstTime() - b.getBurstTime());
+            
+            //Select processes with shortest burst time
+            PCB process = workingQueue.remove(0);
+            
+            
+            execute(process);//execute selected process until completion
+        }
+    }
+
+    // =====================================================
+    // ROUND ROBIN
+    // =====================================================
+
+    public void RR() {
+
+        currentTime = 0;
+
+        int quantum = 5;
+
+        System.out.println(
+                "=========================== "
+                        + "Round Robin Executing "
+                        + "[Time: "
+                        + currentTime
+                        + " ms & Quantum: 5 ms]"
+                        + " ============================="
+        );
+
+        //Continue schedueling whil:
+        //1. Ready queue still contains processes
+        //2. Working queue still contains processes
+        while (
+                loaderThread.isAlive()
+                        || !readyQueue.isEmpty()
+        ) {
+
+            PCB currentP;
+
+            synchronized (readyQueue) {
+            	//CPU waits if there are no ready processes
+                if (readyQueue.isEmpty()) {
+
+                    waits();
+
+                    continue;
+                }
+                
+                //remove first process using FCFS order
+                currentP = readyQueue.remove();
+            }
+            
+            //Start time assigned only once, when process gets CPU for the first time
+            if (currentP.getStartTime() == -1) {
+
+                currentP.setStartTime(currentTime);
+
+                SystemCall.setTime(currentTime);
+
+                SystemCall.createProcess(
+                        currentP.getProcessID()
+                );
+            }
+
+            currentP.setState(PCB.State.RUNNING);
+            
+            //Execute the process for either:
+            //1. The quantum
+            //2. Remaining burst time (if smaller)
+
+            int execTime =
+                    Math.min(
+                            quantum,
+                            currentP.getRemainingBurst()
+                    );
+            
+            //update gantt chart
+            ganttChart +=
+                    String.format(
+                            "| %-4s ",
+                            "P" + currentP.getProcessID()
+                    );
+
+            currentTime += execTime;
+
+            ganttTimes +=
+                    String.format("%-7d", currentTime);
+            
+            //update remaing burst after execution
+            currentP.setRemainingBurst(
+                    currentP.getRemainingBurst()
+                            - execTime
+            );
+            
+            //process finished execution
+            if (currentP.getRemainingBurst() == 0) {
+
+                currentP.setTerminationTime(currentTime);
+
+                currentP.setTurnAroundTime(
+                        currentP.getTerminationTime()
+                                - currentP.getArrivalTime()
+                );
+
+                currentP.setWaitingTime(
+                        currentP.getTerminationTime()
+                                - currentP.getBurstTime()
+                );
+
+                currentP.setState(
+                        PCB.State.TERMINATED
+                );
+
+                SystemCall.setTime(currentTime);
+
+                SystemCall.terminateProcess(
+                        currentP.getProcessID()
+                );
+                
+                //Store completed processe
+                terminatedProccesses.add(currentP);
+                
+                //Free allocated memory after completion
+                SystemCall.deallocateMemory(
+                        currentP.getProcessID(),
+                        currentP.getMemoryRequired()
+                );
+
+                System.out.printf(
+                        "[FINISHED] P%-2d | Start: %-3d | End: %-3d | Burst: %-3d%n",
+                        currentP.getProcessID(),
+                        currentP.getStartTime(),
+                        currentP.getTerminationTime(),
+                        currentP.getBurstTime()
+                );
+
+            } else {
+            	
+            	//Return unfinished process back to Ready queue
+                currentP.setState(PCB.State.READY);
+
+                synchronized (readyQueue) {
+
+                    readyQueue.add(currentP);
+                }
+            }
+        }
+    }
+
+    // =====================================================
+    // PRIORITY
+    // =====================================================
+
+    public void Priority() {
+
+        currentTime = 0;
+        
+        //Temporary queue used for priority scheduling 
+        ArrayList<PCB> workingArray =
+                new ArrayList<>();
+
+        System.out.println(
+                "==================== "
+                        + "Priority Executing "
+                        + "[Time: "
+                        + currentTime
+                        + " ms] ======================="
+        );
+
+        //Continue schedueling whil:
+        //1. Loader thread is still loading processes
+        //2. Ready queue still contains processes
+        //3. Working queue still contains processes
+        while (
+                loaderThread.isAlive()
+                        || !readyQueue.isEmpty()
+                        || !workingArray.isEmpty()
+        ) {
+        	
+        	//transfer newly loaded processes into working queue
+            transferProcesses(workingArray);
+            
+            //CPU waits if there are no ready procceses
+            if (workingArray.isEmpty()) {
+
+                waits();
+
+                continue;
+            }
+            
+            //Detect processes whose waiting time exceeded starvation threshold
+            detectStarvation(workingArray);
+            
+            //Apply aging every 4ms of waiting time to gradually improve process's priority
+            Aging(workingArray);
+            
+            //Sort processes by priority, Arrival order is used when processes have same priority
+            workingArray.sort((a, b) -> {
+
+                if (a.getPriority()
+                        != b.getPriority()) {
+
+                    return a.getPriority()
+                            - b.getPriority();
+                }
+
+                return a.getArrivalOrder()
+                        - b.getArrivalOrder();
+            });
+            
+            //Select highest priority process
+            PCB current = workingArray.remove(0);
+            
+            //Execute selected proccess until completion
+            execute(current);
+        }
+    }
+
+    // =====================================================
+    // HELPERS
+    // =====================================================
+
+    public void transferProcesses(
+            ArrayList<PCB> workingQueue
+    ) {
+
+        synchronized (readyQueue) {
+
+            while (!readyQueue.isEmpty()) {
+
+                PCB process = readyQueue.remove();
+
+                workingQueue.add(process);
+            }
+        }
+    }
+
+    public void waits() {
+
+        try {
+
+            Thread.sleep(30);
+
+        } catch (InterruptedException e) {
+
+            e.printStackTrace();
+        }
+    }
+
+    public void execute(PCB p) {
+
+        if (p.getStartTime() == -1) {
+
+            p.setStartTime(currentTime);
+        }
+
+        p.setState(PCB.State.RUNNING);
+
+        SystemCall.setTime(currentTime);
+
+        SystemCall.createProcess(
+                p.getProcessID()
+        );
+
+        ganttChart +=
+                String.format(
+                        "| %-4s ",
+                        "P" + p.getProcessID()
+                );
+
+        currentTime += p.getBurstTime();
+
+        ganttTimes +=
+                String.format("%-7d", currentTime);
+
+        finishExecution(p);
+    }
+
+    public void finishExecution(PCB p) {
+
+        p.setTerminationTime(currentTime);
+
+        p.setTurnAroundTime(
+                p.getTerminationTime()
+                        - p.getArrivalTime()
+        );
+
+        p.setWaitingTime(
+                p.getTurnAroundTime()
+                        - p.getBurstTime()
+        );
+
+        p.setState(PCB.State.TERMINATED);
+
+        SystemCall.setTime(currentTime);
+
+        SystemCall.terminateProcess(
+                p.getProcessID()
+        );
+
+        SystemCall.deallocateMemory(
+                p.getProcessID(),
+                p.getMemoryRequired()
+        );
+
+        terminatedProccesses.add(p);
+
+        System.out.printf(
+                "[FINISHED] P%-2d | Start: %-3d | End: %-3d | Burst: %-3d%n",
+                p.getProcessID(),
+                p.getStartTime(),
+                p.getTerminationTime(),
+                p.getBurstTime()
+        );
+    }
+
+    public void Aging(
+            ArrayList<PCB> workingQueue
+    ) {
+
+        for (PCB process : workingQueue) {
+        	
+        	//Calculate how many aging intervals the process has waited for
+            int currentAgingLevel =
+                    process.getWaitingTime() / 4;
+            
+           
+            //Prevent repeated aging for the same waiting interval
+            int agingToApply =
+                    currentAgingLevel
+                            - process.getLastAgingLevel();
+
+            int startPriority =
+                    process.getPriority();
+
+            //Improve priority gradually while ensuring priority does not exceed highest level 1
+            for (int i = 0;
+                 i < agingToApply;
+                 i++) {
+
+                if (process.getPriority() > 1) {
+
+                    process.setPriority(
+                            process.getPriority() - 1
+                    );
+                }
+            }
+            
+            //Print aging update if priority was changed
+            if (startPriority
+                    != process.getPriority()) {
+
+                System.out.printf(
+                        "[AGING] Time: %-3d | P%-2d | Priority: %-2d -> %-2d%n",
+
+                        currentTime,
+
+                        process.getProcessID(),
+
+                        startPriority,
+
+                        process.getPriority()
+                );
+            }
+            
+            //Store latest aging level to avoid applying the same aging repeatedly
+            process.setLastAgingLevel(
+                    currentAgingLevel
+            );
+        }
+    }
+
+    public void detectStarvation(
+            ArrayList<PCB> workingQueue
+    ) {
+
+        for (PCB process : workingQueue) {
+        	
+        	//Update waiting time based on current tim
+            process.setWaitingTime(
+                    currentTime
+                            - process.getArrivalTime()
+            );
+            
+            //Process is considered starved if waiting time exceeds starvation threshold
+            if (
+                    process.getWaitingTime()
+                            > process.getNumberOfProcessInRQ() * 5
+                            && !process.getStarvation()
+            ) {
+
+                process.markStarved();
+
+                System.out.println(
+                        "[STARVATION] P:"
+                                + process.getProcessID()
+                                + " starving"
+                );
+            }
+        }
+    }
+
+    // =====================================================
+    // GETTERS
+    // =====================================================
+
+    public String getGanttChart() {
+
+        return ganttChart;
+    }
+
+    public String getGanttTimes() {
+
+        return ganttTimes;
+    }
+}
+
